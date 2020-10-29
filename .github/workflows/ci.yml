@@ -86,43 +86,6 @@ jobs:
         pip install black
         black --line-length 79 --check --diff labelme
 
-    - name: Test with pytest
-      shell: bash -l {0}
-      if: matrix.os != 'windows-latest'
-      env:
-        PYTEST_QT_API: ${{ matrix.PYTEST_QT_API }}
-      run: |
-        # open virtual display
-        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          export DISPLAY=:99.0
-          /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1920x1200x24 -ac +extension GLX +render -noreset
-          (herbstluftwm )&
-        else
-          (sudo Xvfb :99 -ac -screen 0 1024x768x8 )&
-        fi
-        # run test
-        MPLBACKEND='agg' pytest tests -m 'not gpu'
-
-    - name: Run examples
-      shell: bash -l {0}
-      if: matrix.os != 'windows-latest'
-      env:
-        MPLBACKEND: agg
-      run: |
-        labelme --help
-        labelme --version
-        (cd examples/primitives && labelme_json_to_dataset primitives.json && rm -rf primitives_json)
-        (cd examples/tutorial && rm -rf apc2016_obj3_json && labelme_json_to_dataset apc2016_obj3.json && python load_label_png.py && git checkout -- .)
-        (cd examples/semantic_segmentation && rm -rf data_dataset_voc && ./labelme2voc.py data_annotated data_dataset_voc --labels labels.txt && git checkout -- .)
-        (cd examples/instance_segmentation && rm -rf data_dataset_voc && ./labelme2voc.py data_annotated data_dataset_voc --labels labels.txt && git checkout -- .)
-        (cd examples/video_annotation && rm -rf data_dataset_voc && ./labelme2voc.py data_annotated data_dataset_voc --labels labels.txt && git checkout -- .)
-
-        pip install lxml  # for bbox_detection/labelme2voc.py
-        (cd examples/bbox_detection && rm -rf data_dataset_voc && ./labelme2voc.py data_annotated data_dataset_voc --labels labels.txt && git checkout -- .)
-
-        pip install cython && pip install pycocotools  # for instance_segmentation/labelme2coco.py
-        (cd examples/instance_segmentation && rm -rf data_dataset_coco && ./labelme2coco.py data_annotated data_dataset_coco --labels labels.txt && git checkout -- .)
-
     - name: Run pyinstaller
       shell: bash -l {0}
       if: matrix.PYTEST_QT_API == 'pyqt5' && matrix.python-version == '3.7'
